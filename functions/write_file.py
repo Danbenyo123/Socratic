@@ -1,4 +1,24 @@
 import os
+from google.genai import types
+
+schema_write_file = types.FunctionDeclaration(
+    name="write_file",
+    description="Write or overwrite files. returns a success message with length of chars in written file.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="File path to python file, relative to the working directory (default is the working directory itself)",
+            ),
+            "content": types.Schema(
+                type=types.Type.STRING,
+                description="a string of content to be written to file"
+            )
+        },
+    ),
+)
+
 def write_file(working_directory,file_path,content):
     try:
         working_absolute_path = os.path.abspath(working_directory)

@@ -6,6 +6,7 @@ from google.genai import types
 import argparse
 
 from prompts import system_prompt
+from call_function import available_functions
 
 load_dotenv()
 def get_api_key(api_var):
@@ -35,7 +36,10 @@ def send_prompt(api_key,prompt):
     client = genai.Client(api_key=api_key)
     response_test = client.models.generate_content(
         model='gemini-2.5-flash', contents=prompt,
-        config=types.GenerateContentConfig(system_instruction=system_prompt),
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            tools=[available_functions])
+
     )
     return response_test
 
@@ -51,7 +55,11 @@ def main():
     if parsed_prompt.verbose:
         print(f"User prompt: {user_prompt}")
         get_token_used(llm_response)
-    print(llm_response.text)
+    if llm_response.function_calls:
+        for function_call in llm_response.function_calls:
+            print(f"Calling function: {function_call.name}({function_call.args})")
+    else:
+        print(llm_response.text)
 
 main()
 
