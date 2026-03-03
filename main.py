@@ -1,4 +1,5 @@
 import os
+import sys
 
 from dotenv import load_dotenv
 from google import genai
@@ -50,27 +51,37 @@ def main():
     parsed_prompt = parse_prompt()
     user_prompt = parsed_prompt.user_prompt
     messages = [types.Content(role="user", parts=[types.Part(text=user_prompt)])]
-    llm_response = send_prompt(api_key,messages)
-    functions_results_list = []
-    if parsed_prompt.verbose:
-        print(f"User prompt: {user_prompt}")
-        get_token_used(llm_response)
-    if llm_response.function_calls:
-        for function_call in llm_response.function_calls:
-            print(f"Calling function: {function_call.name}({function_call.args})")
-            function_call_result = call_function(function_call,parsed_prompt.verbose)
-            if len(function_call_result.parts) < 1:
-                raise Exception(f"doesnt have parts in function call results. function: {function_call.name}")
-            if not function_call_result.parts[0].function_response:
-                raise Exception(f"first part in response doesnt work. function: {function_call.name}")
-            if not function_call_result.parts[0].function_response.response:
-                raise Exception(f"no response in first part. function: {function_call.name} ")
-            functions_results_list.append(function_call_result.parts[0])
-            if parsed_prompt.verbose is True:
-                print(f"-> {function_call_result.parts[0].function_response.response}")
+    for __ in range(20):
+        llm_response = send_prompt(api_key,messages)
+        if len(llm_response.candidates) > 0:
+            for candidate in llm_response.candidates:
+                messages.append(candidate)
+        functions_results_list = []
+        if parsed_prompt.verbose:
+            print(f"User prompt: {user_prompt}")
+            get_token_used(llm_response)
+        if llm_response.function_calls:
+            for function_call in llm_response.function_calls:
+                print(f"Calling function: {function_call.name}({function_call.args})")
+                function_call_result = call_function(function_call,parsed_prompt.verbose)
+                if len(function_call_result.parts) < 1:
+                    raise Exception(f"doesnt have parts in function call results. function: {function_call.name}")
+                if not function_call_result.parts[0].function_response:
+                    raise Exception(f"first part in response doesnt work. function: {function_call.name}")
+                if not function_call_result.parts[0].function_response.response:
+                    raise Exception(f"no response in first part. function: {function_call.name} ")
+                functions_results_list.append(function_call_result.parts[0])
+                if parsed_prompt.verbose is True:
+                    print(f"-> {function_call_result.parts[0].function_response.response}")
 
-    else:
-        print(llm_response.text)
+        else:
+            print(llm_response.text)
+            break
+
+        messages.append(types.Content(role="user", parts=functions_results_list))
+        if __ > 19:
+            print(f"Max iterations.")
+            sys.exit(1)
 
 main()
 
